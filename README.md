@@ -1,87 +1,112 @@
-# Telegram Bot для записи на наращивание ресниц
+# Telegram Bot for Appointment Scheduling
 
-## Описание проекта
+A Telegram bot for scheduling appointments with a master. The bot allows clients to book appointments, cancel them, and sends notifications to both clients and the master.
 
-Этот проект представляет собой телеграм-бота, разработанного для записи на услуги по наращиванию ресниц у профессионала. Бот упрощает процесс бронирования: пользователи могут просматривать доступные даты и время, выбирать подходящий слот, подтверждать запись и получать напоминания о предстоящих визитах. Кроме того, бот предоставляет информацию о видах услуг и их стоимости, а также позволяет отменять бронирования.
+## Features
 
-## Функциональные возможности
+- Appointment booking with procedure selection
+- Date and time slot selection
+- Appointment cancellation
+- Automatic notifications for both clients and master
+- Admin panel for viewing appointments and statistics
+- SQLite database for storing appointments
+- Back buttons for easy navigation
+- Start button for initial interaction
+- User-friendly interface with emojis
 
-- **Просмотр доступных слотов:** Узнайте, какие даты и время свободны для записи.
-- **Бронирование услуги:** Выберите удобный слот и подтвердите запись.
-- **Напоминания:** Получайте автоматические уведомления за день или за несколько часов до визита.
-- **Информация об услугах:** Узнайте о видах наращивания ресниц, ценах и длительности процедур.
-- **Отмена брони:** Отмените запись прямо через бота, если планы изменились.
+## Setup
 
-## Технические требования
-
-- **Язык программирования:** Python 3.x
-- **Библиотеки:**
-  - `python-telegram-bot` — для работы с API Telegram
-  - `sqlite3` (или другая база данных, например, PostgreSQL) — для хранения данных
-- **База данных:** Используется для управления бронированиями и информацией о пользователях
-
-## Установка и настройка
-
-Следуйте этим шагам, чтобы запустить бота на вашем устройстве:
-
-1. **Клонируйте репозиторий:**
-   ```bash
-   git clone https://github.com/yourusername/your-repo-name.git
-   cd your-repo-name
-   ```
-
-2. **Установите зависимости:**
+1. Clone the repository
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
+3. Create a `.env` file in the project root with the following variables:
+   ```
+   TELEGRAM_TOKEN=your_telegram_bot_token
+   ADMIN_ID=your_telegram_id
+   ```
 
-3. **Настройте токен бота:**
-   - Получите токен у [BotFather](https://t.me/botfather) в Telegram.
-   - Создайте файл `.env` в корневой папке проекта и добавьте:
-     ```
-     BOT_TOKEN=your_bot_token_here
-     ```
+   To get your Telegram ID:
+   1. Send a message to @userinfobot on Telegram
+   2. The bot will reply with your ID
+   3. Copy this ID and paste it as ADMIN_ID in the .env file
+   
+   Alternatively, you can:
+   1. Open Telegram in your browser (web.telegram.org)
+   2. Open any chat
+   3. Look at the URL: `https://web.telegram.org/k/#123456789`
+   4. The number after # is your ID
 
-4. **Настройте базу данных:**
-   - Для SQLite база создаётся автоматически.
-   - Для других баз данных (например, PostgreSQL) настройте подключение в конфигурационном файле.
-
-5. **Запустите бота:**
+4. Run the bot:
    ```bash
    python bot.py
    ```
 
-## Как внести вклад
+## Usage
 
-Мы приветствуем любые улучшения проекта! Чтобы помочь нам:
+### For Clients
 
-1. **Сделайте форк репозитория.**
-2. **Создайте новую ветку** для ваших изменений:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. **Внесите изменения** и закоммитьте их:
-   ```bash
-   git commit -m "Описание ваших изменений"
-   ```
-4. **Отправьте ветку** в ваш форк:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. **Создайте Pull Request** в основном репозитории.
+1. Start the bot with `/start` command
+2. Click the "🚀 Начать" button
+3. Select a procedure from the list
+4. Choose a date from available dates
+5. Select a time slot
+6. Confirm the booking
 
-Если вы нашли ошибку или хотите предложить улучшение, пожалуйста, создайте issue в репозитории.
+To cancel an appointment:
+1. Click "❌ Отменить запись" in the main menu
+2. Select the appointment you want to cancel from the list
+3. Confirm the cancellation
 
-## Часто задаваемые вопросы (FAQ)
+### For Administrators
 
-- **Как связаться с мастером?**  
-  Используйте команду `/contact` в боте.
+1. Access the admin panel by clicking "👨‍💼 Панель администратора" in the main menu
+2. Available options:
+   - View all appointments
+   - View today's appointments
+   - View tomorrow's appointments
+   - View booking statistics
 
-- **Можно ли изменить время записи?**  
-  Да, отмените текущую запись и создайте новую.
+## Navigation
 
-- **Где посмотреть список услуг?**  
-  Введите команду `/services`, чтобы узнать об услугах и ценах.
+- Use "◀️ Назад" buttons to return to previous steps
+- Use "◀️ Назад" in admin panel to return to main admin menu
+- Use "🚀 Начать" to start working with the bot
 
-- **Что делать, если напоминание не пришло?**  
-  Проверьте, включены ли уведомления в Telegram, и убедитесь, что бот не заблокирован.
+## Notifications
+
+The bot sends notifications to:
+- Clients: 24 hours and 1 hour before the appointment
+- Master: When a new appointment is booked or cancelled
+
+## Database
+
+The bot uses SQLite database (`appointments.db`) to store appointments. The database is automatically created when the bot starts.
+
+## Requirements
+
+- Python 3.7+
+- aiogram
+- python-dotenv
+- SQLite3
+
+## Configuration
+
+You can modify the following variables in `bot.py`:
+- `TIME_SLOTS`: Available time slots for appointments
+- `PROCEDURES`: List of procedures and their prices
+
+## Error Handling
+
+The bot includes error handling for:
+- Database operations
+- Notification sending
+- Appointment cancellation
+- Invalid user inputs
+
+## Security
+
+- Admin functions are protected and only accessible to users with the correct ADMIN_ID
+- All database operations are wrapped in try-except blocks
+- User data is properly sanitized before database operations
