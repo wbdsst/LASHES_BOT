@@ -48,6 +48,11 @@ PROCEDURES = {
     "brow_correction": "Brow Correction - 1500₽"
 }
 
+# Add to configuration section
+BOT_PAYMENT_AMOUNT = 400  # Amount in rubles
+PAYMENT_REMINDER_INTERVAL = 7  # Days between reminders
+PAYMENT_LINK = ""  # Replace with your actual payment bot link
+
 # States
 class BookingStates(StatesGroup):
     selecting_procedure = State()
@@ -153,15 +158,37 @@ async def start(message: types.Message):
     """Start command handler"""
     user_id = message.from_user.id
     
-    # Create welcome message with start button
-    keyboard = [[InlineKeyboardButton(text="🚀 Начать", callback_data='start_bot')]]
-    reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
-    
-    await message.answer(
-        "👋 Добро пожаловать в бот для записи на процедуры!\n\n"
-        "Нажмите кнопку 'Начать' для продолжения:",
-        reply_markup=reply_markup
-    )
+    if is_admin(user_id):
+        # Admin menu
+        keyboard = [
+            [InlineKeyboardButton(text="📅 Все записи", callback_data='admin_all')],
+            [InlineKeyboardButton(text="📅 Записи на сегодня", callback_data='admin_today')],
+            [InlineKeyboardButton(text="📅 Записи на завтра", callback_data='admin_tomorrow')],
+            [InlineKeyboardButton(text="📊 Статистика", callback_data='admin_stats')],
+            [InlineKeyboardButton(text="💳 Оплата бота", callback_data='admin_payment')]
+        ]
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+        
+        await message.answer(
+            "👋 Добро пожаловать в панель администратора!\n\n"
+            "Выберите действие:",
+            reply_markup=reply_markup
+        )
+    else:
+        # Client menu
+        keyboard = [
+            [InlineKeyboardButton(text="📅 Записаться на процедуру", callback_data='book')],
+            [InlineKeyboardButton(text="❌ Отменить запись", callback_data='cancel')]
+        ]
+        if is_admin(user_id):
+            keyboard.append([InlineKeyboardButton(text="👨‍💼 Панель администратора", callback_data='admin')])
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+        
+        await message.answer(
+            "👋 Добро пожаловать в бот для записи на процедуры!\n\n"
+            "Выберите действие:",
+            reply_markup=reply_markup
+        )
 
 async def process_start_bot(callback: types.CallbackQuery):
     """Process start button click"""
@@ -512,6 +539,90 @@ async def process_back_to_dates(callback: types.CallbackQuery, state: FSMContext
     else:
         await process_booking_start(callback, state)
 
+async def process_admin_payment(callback: types.CallbackQuery):
+    """Process payment button in admin panel"""
+    if not is_admin(callback.from_user.id):
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton(text="💳 Оплатить", url=PAYMENT_LINK)],
+        [InlineKeyboardButton(text="✅ Подтвердить оплату", callback_data='confirm_payment')],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data='admin_back')]
+    ]
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    
+    await callback.message.edit_text(
+        f"💳 Оплата бота\n\n"
+        f"Сумма к оплате: {BOT_PAYMENT_AMOUNT}₽\n"
+        f"Период: 30 дней\n\n"
+        f"1️⃣ Нажмите кнопку 'Оплатить' для перехода к оплате\n"
+        f"2️⃣ После оплаты нажмите 'Подтвердить оплату'",
+        reply_markup=reply_markup
+    )
+
+async def process_confirm_payment(callback: types.CallbackQuery):
+    """Process payment confirmation"""
+    if not is_admin(callback.from_user.id):
+        return
+    
+    # Add payment record
+    payment_date = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+    if database.add_payment(payment_date, BOT_PAYMENT_AMOUNT):
+        keyboard = [[InlineKeyboardButton(text="◀️ Назад", callback_data='admin_back')]]
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+        
+        await callback.message.edit_text(
+            "✅ Оплата подтверждена!\n\n"
+            f"Следующая оплата: {payment_date}\n"
+            f"Сумма: {BOT_PAYMENT_AMOUNT}₽\n"
+            f"Период: 30 дней",
+            reply_markup=reply_markup
+        )
+    else:
+        await callback.message.edit_text(
+            "❌ Ошибка при добавлении записи об оплате",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data='admin_back')]])
+        )
+
+async def check_payments(bot: Bot):
+    """Check pending payments and send reminders"""
+    while True:
+        try:
+            pending_payments = database.get_pending_payments()
+            today = datetime.now().strftime('%Y-%m-%d')
+            
+            for payment in pending_payments:
+                payment_date = datetime.strptime(payment['payment_date'], '%Y-%m-%d')
+                days_until_payment = (payment_date - datetime.now()).days
+                
+                # Send reminder if payment is due in 7 days or less
+                if days_until_payment <= 7 and days_until_payment > 0:
+                    last_reminder = payment.get('last_reminder_date')
+                    if not last_reminder or (datetime.strptime(last_reminder, '%Y-%m-%d') + timedelta(days=PAYMENT_REMINDER_INTERVAL)).strftime('%Y-%m-%d') <= today:
+                        reminder_message = (
+                            f"⚠️ Напоминание об оплате бота!\n\n"
+                            f"Сумма к оплате: {payment['amount']}₽\n"
+                            f"Дата оплаты: {payment['payment_date']}\n"
+                            f"Осталось дней: {days_until_payment}"
+                        )
+                        await send_notification(bot, ADMIN_ID, reminder_message)
+                        database.update_reminder_date(payment['id'], today)
+                
+                # Mark payment as overdue if payment date has passed
+                elif days_until_payment <= 0:
+                    database.update_payment_status(payment['id'], 'overdue')
+                    overdue_message = (
+                        f"❌ Оплата просрочена!\n\n"
+                        f"Сумма к оплате: {payment['amount']}₽\n"
+                        f"Дата оплаты: {payment['payment_date']}"
+                    )
+                    await send_notification(bot, ADMIN_ID, overdue_message)
+            
+            await asyncio.sleep(3600)  # Check every hour
+        except Exception as e:
+            logger.error(f"Error checking payments: {e}")
+            await asyncio.sleep(3600)  # Wait an hour before retrying
+
 async def main():
     """Start the bot"""
     # Initialize database
@@ -537,14 +648,17 @@ async def main():
     dp.callback_query.register(process_admin_tomorrow, lambda c: c.data == 'admin_tomorrow')
     dp.callback_query.register(process_admin_stats, lambda c: c.data == 'admin_stats')
     dp.callback_query.register(process_admin_back, lambda c: c.data == 'admin_back')
+    dp.callback_query.register(process_admin_payment, lambda c: c.data == 'admin_payment')
+    dp.callback_query.register(process_confirm_payment, lambda c: c.data == 'confirm_payment')
     
     # Register back button handlers
     dp.callback_query.register(process_back_to_start, lambda c: c.data == 'back_to_start')
     dp.callback_query.register(process_back_to_procedures, lambda c: c.data == 'back_to_procedures')
     dp.callback_query.register(process_back_to_dates, lambda c: c.data == 'back_to_dates')
     
-    # Start the appointment checker
+    # Start the appointment checker and payment checker
     asyncio.create_task(check_appointments(bot))
+    asyncio.create_task(check_payments(bot))
     
     # Start polling
     await dp.start_polling(bot)

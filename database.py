@@ -20,7 +20,20 @@ def init_db():
             appointment_date TEXT NOT NULL,
             appointment_time TEXT NOT NULL,
             reminder_sent_24h BOOLEAN DEFAULT 0,
-            reminder_sent_1h BOOLEAN DEFAULT 0
+            reminder_sent_1h BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Create payment tracking table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            payment_date TEXT NOT NULL,
+            amount REAL NOT NULL,
+            status TEXT NOT NULL,
+            last_reminder_date TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
@@ -194,4 +207,84 @@ def get_user_appointments(user_id: int) -> list:
         })
     
     conn.close()
-    return appointments 
+    return appointments
+
+def add_payment(payment_date: str, amount: float, status: str = 'pending') -> bool:
+    """Add a new payment record"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    try:
+        c.execute('''
+            INSERT INTO payments (payment_date, amount, status)
+            VALUES (?, ?, ?)
+        ''', (payment_date, amount, status))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error adding payment: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_pending_payments() -> list:
+    """Get all pending payments"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    c.execute('''
+        SELECT id, payment_date, amount, last_reminder_date
+        FROM payments
+        WHERE status = 'pending'
+        ORDER BY payment_date
+    ''')
+    
+    payments = []
+    for row in c.fetchall():
+        payments.append({
+            'id': row[0],
+            'payment_date': row[1],
+            'amount': row[2],
+            'last_reminder_date': row[3]
+        })
+    
+    conn.close()
+    return payments
+
+def update_payment_status(payment_id: int, status: str) -> bool:
+    """Update payment status"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    try:
+        c.execute('''
+            UPDATE payments
+            SET status = ?
+            WHERE id = ?
+        ''', (status, payment_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error updating payment status: {e}")
+        return False
+    finally:
+        conn.close()
+
+def update_reminder_date(payment_id: int, reminder_date: str) -> bool:
+    """Update last reminder date"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    try:
+        c.execute('''
+            UPDATE payments
+            SET last_reminder_date = ?
+            WHERE id = ?
+        ''', (reminder_date, payment_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error updating reminder date: {e}")
+        return False
+    finally:
+        conn.close() 
