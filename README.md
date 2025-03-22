@@ -9,7 +9,9 @@ A Telegram bot for scheduling appointments with a master. The bot allows clients
 - Appointment cancellation
 - Automatic notifications for both clients and master
 - Admin panel for viewing appointments and statistics
-- SQLite database for storing appointments
+- Monthly subscription payment system
+- Payment reminders and tracking
+- SQLite database for storing appointments and payments
 - Back buttons for easy navigation
 - Start button for initial interaction
 - User-friendly interface with emojis
@@ -38,7 +40,11 @@ A Telegram bot for scheduling appointments with a master. The bot allows clients
    3. Look at the URL: `https://web.telegram.org/k/#123456789`
    4. The number after # is your ID
 
-4. Run the bot:
+4. Configure payment settings in `bot.py`:
+   - Set `PAYMENT_LINK` to your payment bot URL
+   - Adjust `BOT_PAYMENT_AMOUNT` if needed
+
+5. Run the bot:
    ```bash
    python bot.py
    ```
@@ -67,6 +73,14 @@ To cancel an appointment:
    - View today's appointments
    - View tomorrow's appointments
    - View booking statistics
+   - Manage bot subscription
+
+#### Subscription Management
+
+1. Click "💳 Оплата бота" in the admin panel
+2. Follow the payment link to complete the payment
+3. Click "✅ Подтвердить оплату" after payment
+4. The bot will track the subscription period and send reminders
 
 ## Navigation
 
@@ -79,10 +93,18 @@ To cancel an appointment:
 The bot sends notifications to:
 - Clients: 24 hours and 1 hour before the appointment
 - Master: When a new appointment is booked or cancelled
+- Administrator: 
+  - 7 days before subscription renewal
+  - When subscription is overdue
 
 ## Database
 
-The bot uses SQLite database (`appointments.db`) to store appointments. The database is automatically created when the bot starts.
+The bot uses SQLite database (`appointments.db`) to store:
+- Appointments
+- Payments and subscription status
+- Reminder tracking
+
+The database is automatically created when the bot starts.
 
 ## Requirements
 
@@ -96,6 +118,9 @@ The bot uses SQLite database (`appointments.db`) to store appointments. The data
 You can modify the following variables in `bot.py`:
 - `TIME_SLOTS`: Available time slots for appointments
 - `PROCEDURES`: List of procedures and their prices
+- `BOT_PAYMENT_AMOUNT`: Monthly subscription amount
+- `PAYMENT_LINK`: URL to your payment bot
+- `PAYMENT_REMINDER_INTERVAL`: Days before sending payment reminders
 
 ## Error Handling
 
@@ -103,6 +128,7 @@ The bot includes error handling for:
 - Database operations
 - Notification sending
 - Appointment cancellation
+- Payment processing
 - Invalid user inputs
 
 ## Security
@@ -110,3 +136,16 @@ The bot includes error handling for:
 - Admin functions are protected and only accessible to users with the correct ADMIN_ID
 - All database operations are wrapped in try-except blocks
 - User data is properly sanitized before database operations
+- Payment information is handled securely through external payment bot
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

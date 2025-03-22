@@ -51,7 +51,7 @@ PROCEDURES = {
 # Add to configuration section
 BOT_PAYMENT_AMOUNT = 400  # Amount in rubles
 PAYMENT_REMINDER_INTERVAL = 7  # Days between reminders
-PAYMENT_LINK = ""  # Replace with your actual payment bot link
+PAYMENT_LINK = "https://t.me/your_payment_bot"  # Replace with your actual payment bot link
 
 # States
 class BookingStates(StatesGroup):
